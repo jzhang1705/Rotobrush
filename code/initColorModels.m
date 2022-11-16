@@ -2,7 +2,7 @@
 % model Mc, a color model confidence value fc, and a local shape
 % model Ms.
 
-function ColorModels = initializeColorModels(IMG, Mask, MaskOutline, LocalWindows, BoundaryWidth, WindowWidth)
+function ColorModels = initColorModels(IMG, Mask, MaskOutline, LocalWindows, BoundaryWidth, WindowWidth)
 % INITIALIZAECOLORMODELS Initialize color models.  ColorModels is a struct you should define yourself.
 %
 % Must define a field ColorModels.Confidences: a cell array of the color confidence map for each local window.
