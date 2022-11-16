@@ -29,8 +29,12 @@ for i=1:length(Boundaries)
     [WindowCentersX, WindowCentersY] = ...
         equidistantPointsOnPerimeter(Boundary(:,2), Boundary(:,1), PointsForBoundary(i));
 
-    AllLocalBoxCentersX = [AllLocalBoxCentersX; LocalBoxCentersX];
-    AllLocalBoxCentersY = [AllLocalBoxCentersY; LocalBoxCentersY];
+    % AllLocalBoxCentersX = [AllLocalBoxCentersX; LocalBoxCentersX];
+    % AllLocalBoxCentersY = [AllLocalBoxCentersY; LocalBoxCentersY];
+    
+    % Code makes more sense
+    AllWindowCentersX = [AllWindowCentersX; WindowCentersX];
+    AllWindowCentersY = [AllWindowCentersY; WindowCentersY];
 end
 
 LocalSamples = [AllWindowCentersX AllWindowCentersY];

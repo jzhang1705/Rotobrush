@@ -12,13 +12,12 @@ function ColorModels = initializeColorModels(IMG, Mask, MaskOutline, LocalWindow
     
     % Declare ColorModel struct
     ColorModels = struct;
-    ColorModels.Confidences = cell(numLocalWindows, 1);
+    ColorModels.Confidence = cell(numLocalWindows, 1);
     ColorModels.F = cell(numLocalWindows, 1); % foreground points
     ColorModels.B = cell(numLocalWindows, 1); % background  points
-    ColorModels.F_GMM = cell(numLocalWindows, 1); % foreground GMMs
-    ColorModels.B_GMM = cell(numLocalWindows, 1); % background GMMs
-    ColorModels.d = cell(numLocalWindows, 1); % distances
-    ColorModels.p_c = cell(numLocalWindows, 1); % foreground probabilities
+    ColorModels.F_GMM = cell(numLocalWindows, 1); % foreground GMM
+    ColorModels.B_GMM = cell(numLocalWindows, 1); % background GMM
+    ColorModels.distan = cell(numLocalWindows, 1);
     
     % Gets all the spacial distances
     d = bwdist(MaskOutline);
@@ -117,14 +116,11 @@ function ColorModels = initializeColorModels(IMG, Mask, MaskOutline, LocalWindow
         denominator = sum(w_cx(:));
         fc = 1 - numerator/denominator;
         
-        % Add elements to the ColorModel struct
+        % add elements to the ColorModel struct
         ColorModels.Confidences{i} = fc;
-        ColorModels.F{i} = F;
-        ColorModels.B{i} = B;
         ColorModels.F_GMM{i} = F_GMM;
         ColorModels.B_GMM{i} = B_GMM;
-        ColorModels.d{i} = d_x;
-        ColorModels.p_c{i} = p_c;
+        
     end
 end
 
