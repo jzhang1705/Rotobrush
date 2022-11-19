@@ -47,33 +47,21 @@ function [WarpedFrame, WarpedMask, WarpedMaskOutline, WarpedLocalWindows] = calc
     % Only SIFT features inside the foreground object in I_t are used for matching
     % Thus we must isolate the foreground of I_t (IMG1)
     
-    % Note: It might be a good a good idea to use metrics and find corner
-    % points to avoid errors but this might not be necessary
+    F_img1 = []; % foreground of IMG1
+    matched_F = []; % matched points of the foregound for IMG1
     
-    F_img1 = []; % foreground of IMG1 
-    matched_F = []; % matched points of the foregound for IMG1   
+    matched_F_metric []; 
     
     % https://www.mathworks.com/help/vision/ref/kazepoints.length.html
     for i = 1:length(matchedPtsPrev)
         point1 = matchedPtsPrev(i,:);
         point2 = matchedPtsCurr(i,:);
-   
+        
         % Remember x and y are column and row respectively (switched)
         if(Mask(round(point1(:,2)), round(point1(:,1))) == 1)
-            F_img1 = [F_img1; point1];
-            matched_F = [matched_F; point2];
+            
         end
     end
-    
-    % Get the transform
-    tform = estimateGeometricTransform(matched_F,F_img1,'affine');
-    
-    % Declare the parameters (returns)
-    % Based from myRotobrush.m way of implementing similar features
-    WarpedMask = imwarp(Mask, tform);
-    WarpedMask = imresize(WarpedMask, [size(IMG2, 1), size(IMG2, 2)]); 
-    WarpedMaskOutline = bwperim(WarpedMask,4);
-    WarpedFrame = imresize(imwarp(IMG1, transform), [size(IMG2, 1), size(IMG2, 2)]);    
-    WarpedLocalWindows = transformPointsForward(transform, Windows(:,1), Windows(:, 2));
+        
 end
 
