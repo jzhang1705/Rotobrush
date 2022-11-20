@@ -44,17 +44,17 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         % we only use pixels whose spatial distance to the segmented
         % boundary is larger than a threshold (5 pixels in our system) as the
         % training data for the GMMs.
-        Xlower = Xlower + BoundaryWidth;
-        Xupper = Xupper - BoundaryWidth;
-        Ylower = Ylower + BoundaryWidth;
-        Yupper = Yupper - BoundaryWidth;
+        XlowerB = Xlower + BoundaryWidth;
+        XupperB = Xupper - BoundaryWidth;
+        YlowerB = Ylower + BoundaryWidth;
+        YupperB = Yupper - BoundaryWidth;
         
 
         % grab the local mask for our window
-        local_mask = mask(Ylower:Yupper, Xlower:Xupper);
+        local_mask = mask(YlowerB:YupperB, XlowerB:XupperB);
 
         % grab the pixel values from the window
-        values = img(Ylower:Yupper, Xlower:Xupper);
+        values = img(YlowerB:YupperB, XlowerB:XupperB);
 
         % apply the mask
         F = values.*repmat(double(local_mask),[1,1,3]);
