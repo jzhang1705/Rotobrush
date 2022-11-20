@@ -68,9 +68,11 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         F(all(F' == 0), :) = [];
         B(all(B' == 0), :) = [];      
         
+        display(F);
+
         % Create gmm models 
-        F_GMM = fitgmdist(F, 3);
-        B_GMM = fitgmdist(B, 3);
+        F_GMM = fitgmdist(F, 3, 'CovType', 'diagonal');
+        B_GMM = fitgmdist(B, 3, 'CovType', 'diagonal');
         
         
         % initialize probability map
@@ -79,9 +81,9 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         % y = pdf(pd,x) returns the pdf of the probability distribution object pd, 
         % evaluated at the values in x.
         c = 1; % column index
-        for j = lowerX:upperX
+        for j = Xlower:Xupper
             r = 1; %row index
-            for k = lowerY:upperY
+            for k = Ylower:Yupper
                 pcxF = pdf(F_GMM, [img(k,j,1), img(k,j,2), img(k,j,3)]);
                 pcxB = pdf(B_GMM, [img(k,j,1), img(k,j,2), img(k,j,3)]);
                 p_c(r,c) = pcxF/(pcxF + pcxB); %(r,c) is x
