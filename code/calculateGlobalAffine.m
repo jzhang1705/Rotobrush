@@ -69,11 +69,11 @@ function [WarpedFrame, WarpedMask, WarpedMaskOutline, WarpedLocalWindows] = calc
     tform = estimateGeometricTransform(matched_F,F_img1,'affine');
     
     % Declare the parameters (returns)
-    % Based from myRotobrush.m way of implementing similar features
+    % Based from initLocalWindows.m way of implementing similar features
     WarpedMask = imwarp(Mask, tform);
     WarpedMask = imresize(WarpedMask, [size(IMG2, 1), size(IMG2, 2)]); 
     WarpedMaskOutline = bwperim(WarpedMask,4);
-    WarpedFrame = imresize(imwarp(IMG1, transform), [size(IMG2, 1), size(IMG2, 2)]);    
-    WarpedLocalWindows = transformPointsForward(transform, Windows(:,1), Windows(:, 2));
+    WarpedFrame = imresize(imwarp(IMG1, tform), [size(IMG2, 1), size(IMG2, 2)]);    
+    WarpedLocalWindows = transformPointsForward(tform, Windows(:,1), Windows(:, 2));
 end
 
