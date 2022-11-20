@@ -57,16 +57,12 @@ function [NewLocalWindows] = localFlowWarp(WarpedPrevFrame, CurrentFrame, LocalW
            end
         end
         
-        % Change/Area
+        %Change
         averageChangeX = changeX / (Width^2);
         averageChangeY = changeY / (Width^2);
-        
         newX = round(LocalWindows(i,1) + averageChangeX);
         newY = round(LocalWindows(i,2) + averageChangeY);
-        
-        NewLocalWindows(i, 1) = newX;
-        NewLocalWindows(i, 2) = newY;
-
+        NewLocalWindows(i, 1:2) =  [newX, newY];
     end
 end
 

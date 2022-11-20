@@ -1,6 +1,7 @@
 % curr = prev+1;
 % calculateGlobalAffine(images{prev}, images{curr}, mask, LocalWindows);
 
+% We want the features of I'_{t+1}
 function [WarpedFrame, WarpedMask, WarpedMaskOutline, WarpedLocalWindows] = calculateGlobalAffine(IMG1,IMG2,Mask,Windows)
 % CALCULATEGLOBALAFFINE: finds affine transform between two frames, and applies it to frame1, the mask, and local windows.
     
@@ -70,6 +71,7 @@ function [WarpedFrame, WarpedMask, WarpedMaskOutline, WarpedLocalWindows] = calc
     
     % Declare the parameters (returns)
     % Based from initLocalWindows.m way of implementing similar features
+    % I'_{t+1} is the "Warped" 
     WarpedMask = imwarp(Mask, tform);
     WarpedMask = imresize(WarpedMask, [size(IMG2, 1), size(IMG2, 2)]); 
     WarpedMaskOutline = bwperim(WarpedMask,4);
