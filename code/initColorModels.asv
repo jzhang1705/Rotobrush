@@ -2,7 +2,7 @@
 % model Mc, a color model confidence value fc, and a local shape
 % model Ms.
 
-function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, BoundaryWidth, WindowWidth)
+function ColorModels = initColorModels(img, Mask, MaskOutline, LocalWindows, BoundaryWidth, WindowWidth)
 % INITIALIZAECOLORMODELS Initialize color models.  ColorModels is a struct you should define yourself.
 %
 % Must define a field ColorModels.Confidences: a cell array of the color confidence map for each local window.
@@ -26,14 +26,16 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
     % We build GMMs for the local foreground (F) and background (B) regions, in the Lab color space.
     img = rgb2lab(img);
 
+    % The number of components in each
+    % GMM is set to 3 as we expect simple color distributions in a small local region.
+    k = 3;
+
     % σc is fixed as half of the window size in our system. 
     sigma = WindowWidth/2;
 
     % GMM model is a window-level local classifier.
     for i = 1:numLocalWindows
         % Get the corners of the window
-
-        display(LocalWindows(i,:));
 
         Xlower = max(LocalWindows(i,1) - sigma, 1);
         Xupper = min(LocalWindows(i,1) + sigma, size(img,1));
@@ -49,12 +51,10 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         Ylower = Ylower + BoundaryWidth;
         Yupper = Yupper - BoundaryWidth;
         
+        % Two GMM are built for F and B separately.
 
-        % grab the local mask for our window
-        local_mask = mask(Ylower:Yupper, Xlower:Xupper);
-
-        % grab the pixel values from the window
-        values = img(Ylower:Yupper, Xlower:Xupper);
+        
+        local_mask = Mask(Xlower:Xupper, Ylower:Yupper);
 
         % apply the mask
         F = values.*repmat(double(local_mask),[1,1,3]);
@@ -66,18 +66,23 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         
         % remove the 0 values, aka the ones not included in mask
         F(all(F' == 0), :) = [];
-        B(all(B' == 0), :) = [];      
+        B(all(B' == 0), :) = [];        
         
         % Create gmm models 
-        F_GMM = fitgmdist(F, 3);
-        B_GMM = fitgmdist(B, 3);
+        F_GMM = fitgmdist(F, k);
+        B_GMM = fitgmdist(B, k);
         
-        
-        % initialize probability map
+        % For a pixel x in the window,its foreground probability generated 
+        % from the color model is computed as
+        % pc(x) = pc(x|F)/(pc(x|F) + pc(x|B))
+        % where pc(x|F) and pc(x|B) are the corresponding probabilities
+        % computed from the two GMMs.
         p_c = zeros(WindowWidth, WindowWidth);
+        
         
         % y = pdf(pd,x) returns the pdf of the probability distribution object pd, 
         % evaluated at the values in x.
+        
         c = 1; % column index
         for j = lowerX:upperX
             r = 1; %row index
@@ -100,14 +105,14 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         % is fixed as half of the window size in our system.
         
         % Gets all the spacial distanes for points in a window
-        d_x = d(Ylower:Yupper, Xlower:Xupper); 
+        d_x = d(lowerY:upperY, lowerX:upperX); 
         
         % Compute the weighting function ωc(x)
         w_cx = exp((-d_x.^2)/(sigma)^2);
         
         % Calculate the local color model confidence fc
         % |L^t(x) - p_c(x)|
-        left = abs(MaskOutline(Ylower:Yupper,Xlower:Xupper) - p_c); 
+        left = abs(MaskOutline(lowerY:upperY,lowerX:upperX) - p_c); 
         numerator = left.*w_cx;
         numerator = sum(numerator(:)); % Sum is the integral
         denominator = sum(w_cx(:));

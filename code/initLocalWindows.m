@@ -35,6 +35,7 @@ for i=1:length(Boundaries)
     % Code makes more sense
     AllWindowCentersX = [AllWindowCentersX; WindowCentersX];
     AllWindowCentersY = [AllWindowCentersY; WindowCentersY];
+    
 end
 
 LocalSamples = [AllWindowCentersX AllWindowCentersY];
