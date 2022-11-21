@@ -5,10 +5,10 @@
 % Feel free to modify this code as you see fit.
 
 % Some parameters you need to tune:
-WindowWidth = -1;  
-ProbMaskThreshold = -1; 
-NumWindows= -1; 
-BoundaryWidth = -1;
+WindowWidth = 50;  
+ProbMaskThreshold = 0.5; 
+NumWindows= 35; 
+BoundaryWidth = 2;
 
 % Load images:
 fpath = '../input';
@@ -31,14 +31,6 @@ end
 % NOTE: to save time during development, you should save/load your mask rather than use ROIPoly every time.
 mask = roipoly(images{1});
 
-imshow(imoverlay(images{1}, boundarymask(mask,8),'red'));
-set(gca,'position',[0 0 1 1],'units','normalized')
-F = getframe(gcf);
-[I,~] = frame2im(F);
-imwrite(I, fullfile(fpath, strip(imageNames(1,:))));
-outputVideo = VideoWriter(fullfile(fpath,'video.mp4'),'MPEG-4');
-open(outputVideo);
-writeVideo(outputVideo,I);
 
 % Sample local windows and initialize shape+color models:
 [mask_outline, LocalWindows] = initLocalWindows(images{1},mask,NumWindows,WindowWidth,true);
@@ -47,11 +39,11 @@ ColorModels = ...
     initColorModels(images{1},mask,mask_outline,LocalWindows,BoundaryWidth,WindowWidth);
 
 % You should set these parameters yourself:
-fcutoff = -1;
-SigmaMin = -1;
-SigmaMax = -1;
-R = -1;
-A = -1;
+fcutoff = 0.85;
+SigmaMin = 2;
+SigmaMax = 40;
+R = 2;
+A = (SigmaMax - SigmaMin)/((1 - fcutoff)^R);
 ShapeConfidences = ...
     initShapeConfidences(LocalWindows,ColorModels,...
     WindowWidth, SigmaMin, A, fcutoff, R);
@@ -72,6 +64,7 @@ showColorConfidences(images{1},mask_outline,ColorModels.Confidences,LocalWindows
 for prev=1:(length(files)-1)
     curr = prev+1;
     fprintf('Current frame: %i\n', curr)
+
     
     %%% Global affine transform between previous and current frames:
     [warpedFrame, warpedMask, warpedMaskOutline, warpedLocalWindows] = calculateGlobalAffine(images{prev}, images{curr}, mask, LocalWindows);

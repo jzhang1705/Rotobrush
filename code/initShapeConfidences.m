@@ -17,7 +17,7 @@ function ShapeConfidences = initShapeConfidences(LocalWindows, ColorConfidences,
         else
             sigma_s = SigmaMin;
         end
-         ShapeConfidences.Confidences{i} = 1 - exp(-ColorConfidences.d{i}.^2 / sigma_s^2);
+        ShapeConfidences.Confidences{i} = 1 - exp(-ColorConfidences.d{i}.^2 / sigma_s^2);
     end
     
 end

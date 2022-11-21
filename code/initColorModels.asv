@@ -35,10 +35,10 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
 
         display(LocalWindows(i,:));
 
-        Xlower = round(LocalWindows(i,1) - WindowWidth / 2);
-        Xupper = round(LocalWindows(i,1) + WindowWidth / 2);
-        Ylower = round(LocalWindows(i,2) - WindowWidth / 2);
-        Yupper = round(LocalWindows(i,2) + WindowWidth / 2);
+        Xlower = round(max(LocalWindows(i,1) - floor(WindowWidth / 2), 1));
+        Xupper = round(min(LocalWindows(i,1) + WindowWidth / 2, size(img,1)));
+        Ylower = round(max(LocalWindows(i,2) - WindowWidth / 2, 1));
+        Yupper = round(min(LocalWindows(i,2) + WindowWidth / 2, size(img,2)));
         
         % To avoid possible sampling errors, 
         % we only use pixels whose spatial distance to the segmented
@@ -75,7 +75,7 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         
         
         % initialize probability map
-        p_c = zeros(WindowWidth);
+        p_c = zeros(WindowWidth, WindowWidth);
         
         % y = pdf(pd,x) returns the pdf of the probability distribution object pd, 
         % evaluated at the values in x.
@@ -90,7 +90,6 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
             end
             c = c + 1;
         end
-
         
         % The local color model confidence fc is used to describe how separable the 
         % local foreground is against the local background using just the color model.
