@@ -21,19 +21,21 @@ function [NewLocalWindows] = localFlowWarp(WarpedPrevFrame, CurrentFrame, LocalW
     % object is dynamic and changes after each use of estimateflow. 
     opticFlow = opticalFlowHS;
     
-    frameGray1 = im2gray(WarpedPrevFrame); % Need to convert to grayscale images
-    frameGray2 = im2gray(CurrentFrame); 
+    I1 = im2gray(WarpedPrevFrame); % Need to convert to grayscale images
+    I2 = im2gray(CurrentFrame); 
     
     % https://www.mathworks.com/help/vision/ref/opticalflowobject.html
     % estimateFlow returns an optical flow object
-    flow = estimateFlow(opticFlow,frameGray1); % remember opticFlow is dynamic
-    flow = estimateFlow(opticFlow,frameGray2);
+    estimateFlow(opticFlow,I1);
+    flow = estimateFlow(opticFlow,I2);
     
     %% Find the average of the flow vectors inside the object’s bounds and local
     % windows bound, use (the average of) that to re-center windows.
     
     % There are x components and y components for velocity which are the
     % flow vectors
+    velocityX = flow.Vx;
+    velocityY = flow.Vy;
     
     sigma_c = Width/2;
     NewLocalWindows = LocalWindows;
@@ -51,18 +53,22 @@ function [NewLocalWindows] = localFlowWarp(WarpedPrevFrame, CurrentFrame, LocalW
         for j = lowerX:upperX
            for k = lowerY:upperY
                if (Mask(k,j) == 1)
-                   changeX = changeX + flow.Vx(k,j);
-                   changeY = changeY + flow.Vy(k,j);
+                   changeX = changeX + velocityX(k,j);
+                   changeY = changeY + velocityY(k,j);
                end
            end
         end
         
-        %Change
+        % Change/Area
         averageChangeX = changeX / (Width^2);
         averageChangeY = changeY / (Width^2);
+        
         newX = round(LocalWindows(i,1) + averageChangeX);
         newY = round(LocalWindows(i,2) + averageChangeY);
-        NewLocalWindows(i, 1:2) =  [newX, newY];
+        
+        NewLocalWindows(i, 1) = newX;
+        NewLocalWindows(i, 2) = newY;
+
     end
 end
 
