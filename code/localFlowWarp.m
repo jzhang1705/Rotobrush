@@ -37,7 +37,8 @@ function [NewLocalWindows] = localFlowWarp(WarpedPrevFrame, CurrentFrame, LocalW
     
     sigma_c = Width/2;
     NewLocalWindows = LocalWindows;
-    for i = 1:size(LocalWindows,1)
+    numLocalWindows = size(NewLocalWindows, 1);
+    for i = 1:numLocalWindows
         
         % Get the corners of the window
         lowerX = round(LocalWindows(i,1) - sigma_c);

@@ -29,7 +29,6 @@ function [mask, LocalWindows, ColorModels, ShapeConfidences] = ...
     TsF = 0.75;
     TsB = 0.25;
     sigma_c = WindowWidth/2;
-    
     for i = 1:numLocalWindows
         %lowerX = round(LocalWindows(i,1) - sigma_c);
         %upperX = round(LocalWindows(i,1) + sigma_c);
@@ -46,7 +45,7 @@ function [mask, LocalWindows, ColorModels, ShapeConfidences] = ...
         % These are both carried over from the previous frame.
         
         d_x = d(lowerY:upperY, lowerX:upperX);
-        ShapeConfidences.Confidences{i} = 1 - exp(-d_x.^2 / SigmaMin^2);
+        ShapeConfidences.Confidences{i} = 1 - exp(-d_x.^2 / sigma_s^2);
         
         % Updating the color model Mc is essential for achieving good segmentation
         % Since the foreground and the background usually have
@@ -137,14 +136,9 @@ function [mask, LocalWindows, ColorModels, ShapeConfidences] = ...
         ShapeConfidences.Confidences{i} = 1 - exp(-ColorConfidences.d{i}.^2 / sigma_s^2);
         
         % Calulate pkf
-        pkf = ShapeConfidences.Confidences{i}.*warpedMask + (1 - ShapeConfidences.Confidences{i}).*p_c;
-        ColorModels.p_c{i} = pkf;
+        LHS = 
     end
     
-    e = 0.1;
     
-    pf = [height, width] = size(image);
-    for i = 
-       
 end
 
