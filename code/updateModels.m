@@ -63,17 +63,37 @@ function [mask, LocalWindows, ColorModels, ShapeConfidences] = ...
         f_probs = window_vector(f_indices, :);
         b_probs = window_vector(b_indices, :);
 
-        if isempty(f_probs) || isempty(b_probs)
-            continue
-        end
+
         % join old F,B pixels with new F,B pixels
         all_f = [f_probs; ColorModels.F{i}];
         all_b = [b_probs; ColorModels.B{i}];
 
         % train new models
+        if size(all_f, 1) <= 3 || size(all_b, 1) <= 3
 
-        fGMM = fitgmdist(all_f, 1);
-        bGMM = fitgmdist(all_b, 1);
+            w{i} = NewLocalWindows(i,:);
+            foreground{i} = all_f;
+            background{i} = all_b;
+            f_prob{i} = ColorModels.F_GMM{i};
+            b_prob{i} = ColorModels.B_GMM{i};  
+            confidence{i} = ColorModels.Confidences{i};
+            probs{i} = ColorModels.p_c{i};
+            d{i} = ColorModels.d{i};
+
+            continue
+        end
+
+        try
+            fGMM = fitgmdist(all_f, 1);
+        catch
+            fGMM = fitgmdist(all_f, 1, 'RegularizationValue',0.1);
+        end
+
+        try
+            bGMM = fitgmdist(all_b, 1);
+        catch
+            bGMM = fitgmdist(all_b, 1, 'RegularizationValue',0.1);
+        end
 
         % run new models on window
         new_window_f_prob = pdf(fGMM, window_vector);
