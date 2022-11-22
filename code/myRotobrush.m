@@ -31,6 +31,15 @@ end
 % NOTE: to save time during development, you should save/load your mask rather than use ROIPoly every time.
 mask = roipoly(images{1});
 
+imshow(imoverlay(images{1}, boundarymask(mask,8),'red'));
+set(gca,'position',[0 0 1 1],'units','normalized')
+F = getframe(gcf);
+[I,~] = frame2im(F);
+modifiedpath = '../output/';
+imwrite(I, fullfile(modifiedpath, strip(imageNames(1,:))));
+outputVideo = VideoWriter(fullfile(modifiedpath,'video.mp4'),'MPEG-4');
+open(outputVideo);
+writeVideo(outputVideo,I);
 
 % Sample local windows and initialize shape+color models:
 [mask_outline, LocalWindows] = initLocalWindows(images{1},mask,NumWindows,WindowWidth,true);
@@ -108,12 +117,12 @@ for prev=1:(length(files)-1)
     mask_outline = bwperim(mask,4);
 
     % Write video frame:
-    imshow(imoverlay(images{curr}, boundarymask(mask,8), 'red'));
-    set(gca,'position',[0 0 1 1],'units','normalized')
-    F = getframe(gcf);
-    [I,~] = frame2im(F);
-    imwrite(I, fullfile(fpath, strip(imageNames(curr,:))));
-    writeVideo(outputVideo,I);
+%     imshow(imoverlay(images{curr}, boundarymask(mask,8), 'red'));
+%     set(gca,'position',[0 0 1 1],'units','normalized')
+%     F = getframe(gcf);
+%     [I,~] = frame2im(F);
+%     imwrite(I, fullfile(fpath, strip(imageNames(curr,:))));
+%     writeVideo(outputVideo,I);
 
     imshow(images{curr})
     hold on

@@ -53,43 +53,51 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         % grab the local mask for our window
         local_mask = mask(YlowerB:YupperB, XlowerB:XupperB);
 
-        % grab the pixel values from the window
-        values = img(YlowerB:YupperB, XlowerB:XupperB);
+        % WINDOW
+        window = img(Ylower:Yupper, Xlower:Xupper, :);
+
+        l = window(:,:,1);
+        a = window(:,:,2);
+        b = window(:,:,3);
+
+        window_vector = [];
+        window_vector(:,1:3) = [l(:),a(:),b(:)];
+
+        % TRAINING WINDOW
+        window_train = img(YlowerB:YupperB, XlowerB:XupperB, :);
+
+        l = window_train(:,:,1);
+        a = window_train(:,:,2);
+        b = window_train(:,:,3);
+
+        window_train_vector = [];
+        window_train_vector(:,1:3) = [l(:),a(:),b(:)];
+
 
         % apply the mask
-        F = values.*repmat(double(local_mask),[1,1,3]);
-        B = values.*repmat(double(~local_mask),[1,1,3]);
-        
-        % reshape into pixel vector
-        F = reshape(F, size(F,1)*size(F,2), 3);
-        B = reshape(B, size(B,1)*size(B,2), 3);
-        
+        F = window_train_vector.*repmat(double(local_mask(:)),[1,1]);
+        B = window_train_vector.*repmat(double(~local_mask(:)),[1,1]);
+    
+
         % remove the 0 values, aka the ones not included in mask
-        F(all(F' == 0), :) = [];
-        B(all(B' == 0), :) = [];      
+        F(~any(F, 2), :) = [];
+        B(~any(B, 2), :) = [];   
         
 
         % Create gmm models 
-        F_GMM = fitgmdist(F, 3, 'CovType', 'diagonal');
-        B_GMM = fitgmdist(B, 3, 'CovType', 'diagonal');
+        F_GMM = fitgmdist(F, 1);
+        B_GMM = fitgmdist(B, 1);
         
         
         % initialize probability map
         p_c = zeros(WindowWidth);
-        
-        % y = pdf(pd,x) returns the pdf of the probability distribution object pd, 
-        % evaluated at the values in x.
-        c = 1; % column index
-        for j = Xlower:Xupper
-            r = 1; %row index
-            for k = Ylower:Yupper
-                pcxF = pdf(F_GMM, [img(k,j,1), img(k,j,2), img(k,j,3)]);
-                pcxB = pdf(B_GMM, [img(k,j,1), img(k,j,2), img(k,j,3)]);
-                p_c(r,c) = pcxF/(pcxF + pcxB); %(r,c) is x
-                r = r + 1;
-            end
-            c = c + 1;
-        end
+
+        % prob map for Fore and Back
+        f_prob = pdf(F_GMM, window_vector);
+        b_prob = pdf(B_GMM, window_vector);
+
+        % calculate prob map
+        p_c = f_prob ./ (f_prob + b_prob);
 
         
         % The local color model confidence fc is used to describe how separable the 
@@ -109,6 +117,8 @@ function ColorModels = initColorModels(img, mask, MaskOutline, LocalWindows, Bou
         
         % Calculate the local color model confidence fc
         % |L^t(x) - p_c(x)|
+        p_c = reshape(p_c, [size(window, 1) size(window, 2)]);
+
         left = abs(MaskOutline(Ylower:Yupper,Xlower:Xupper) - p_c); 
         numerator = left.*w_cx;
         numerator = sum(numerator(:)); % Sum is the integral

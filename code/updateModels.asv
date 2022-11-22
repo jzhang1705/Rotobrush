@@ -16,129 +16,201 @@ function [mask, LocalWindows, ColorModels, ShapeConfidences] = ...
     )
 % UPDATEMODELS: update shape and color models, and apply the result to generate a new mask.
 % Feel free to redefine this as several different functions if you prefer.
-    
 
+    numLocalWindows = size(NewLocalWindows, 1);
+    confidence = cell(numLocalWindows, 1);
+    foreground = cell(numLocalWindows, 1);
+    background = cell(numLocalWindows, 1);
+    f_prob = cell(numLocalWindows, 1);
+    b_prob = cell(numLocalWindows, 1);
+    d = cell(numLocalWindows, 1);
+    probs = cell(numLocalWindows, 1);
+    w = cell(numLocalWindows, 1);
+    
     IMG = rgb2lab(CurrentFrame); % recommended to use lab
-    
-    d = bwdist(warpedMaskOutline);       
-    
+         
     
     numLocalWindows = size(NewLocalWindows, 1);
     
-    k = 3;
-    TsF = 0.75;
-    TsB = 0.25;
-    sigma_c = WindowWidth/2;
     for i = 1:numLocalWindows
-        %lowerX = round(LocalWindows(i,1) - sigma_c);
-        %upperX = round(LocalWindows(i,1) + sigma_c);
-        %lowerY = round(LocalWindows(i,2) - sigma_c);
-        %upperY = round(LocalWindows(i,2) + sigma_c); 
         
-        lowerX = round(newLocalWindows(i,1) - sigma_c);
-        upperX = round(newLocalWindows(i,1) + sigma_c);
-        lowerY = round(newLocalWindows(i,2) - sigma_c);
-        upperY = round(newLocalWindows(i,2) + sigma_c); 
+        % grab bounds
+        lowerX = round(NewLocalWindows(i,1) - WindowWidth/2);
+        upperX = round(NewLocalWindows(i,1) + WindowWidth/2);
+        lowerY = round(NewLocalWindows(i,2) - WindowWidth/2);
+        upperY = round(NewLocalWindows(i,2) + WindowWidth/2); 
+
+        % grab all pixels in window
+        window = IMG(lowerY:upperY, lowerX:upperX, :);
+        l = window(:,:,1);
+        a = window(:,:,2);
+        b = window(:,:,3);
+        window_vector = [];
+        window_vector(:,1:3) = [l(:),a(:),b(:)];
+
+        % prob map for Fore and Back
+        curr_window_f_prob = pdf(ColorModels.F_GMM{i}, window_vector);
+        curr_window_b_prob = pdf(ColorModels.B_GMM{i}, window_vector);
+
+        % calculate prob map
+        old_probs = curr_window_f_prob ./ (curr_window_f_prob + curr_window_b_prob);
+
+        % points we will train new gmm models with
+        f_indices = find(old_probs >= 0.75);
+        b_indices = find(old_probs <= 0.25);
+
+        % grab the values
+        f_probs = window_vector(f_indices, :);
+        b_probs = window_vector(b_indices, :);
+
+        % join old F,B pixels with new F,B pixels
+        all_f = [f_probs; ColorModels.F{i}];
+        all_b = [b_probs; ColorModels.B{i}];
+
+        % train new models
+        fGMM = fitgmdist(all_f, 1);
+        bGMM = fitgmdist(all_b, 1);
+
+        % run new models on window
+        new_window_f_prob = pdf(fGMM, window_vector);
+        new_window_b_prob = pdf(bGMM, window_vector);
+
+        % new probability map
+        new_probs = new_window_f_prob ./ (new_window_f_prob + new_window_b_prob);
+
+        % count new f,b pixels found by new gmm model
+        new_f_count = find(new_probs == 1);
+        new_b_count = find(new_probs ~= 1);
+
+        % update the distance
+        NewDistance = bwdist(warpedMaskOutline);
+        NewDistance = NewDistance(lowerY:upperY, lowerX:upperX);
+        NewDistance = -NewDistance.^2;
+
         
-        
-        % The shape model is composed of the foreground mask and the shape confidence map. 
-        % These are both carried over from the previous frame.
-        
-        d_x = d(lowerY:upperY, lowerX:upperX);
-        ShapeConfidences.Confidences{i} = 1 - exp(-d_x.^2 / sigma_s^2);
-        
-        % Updating the color model Mc is essential for achieving good segmentation
-        % Since the foreground and the background usually have
-        % different motions, new background colors may appear in the local
-        % region (window). To update the color model, we build a new foreground
-        % G^{T+1}_F by sampling all pixels in the warped window
-        % whose foreground confidence computed from the updated shape
-        % model is greater than a high threshold T^s_F (0.75) (f_s(x) = 1 - exp(-d^2(x)/sigma_s^2)
-        % A new background GMM G^{T+1}_B is constructed in a similar way using a
-        % low threshold T^s_B (0.25).
-        
-        % https://www.mathworks.com/help/matlab/ref/find.html
-        F_indices = find(ShapeConfidences.Confidences{i} > TsF); % Gets the indices
-        B_indices = find(ShapeConfidences.Confidences{i} < TsB);
-        
-        % Get the actual pixel values (might not be correct at all)
-        F_new = img(F_indices,:);
-        B_new = img(B_indices,:);
-        
-        F_GMM_new = fitgmdist(F_new, k);
-        B_GMM_new = fitgmdist(B_new, k);
-        
-        % Paragraph 3 of section 2.3 (research) 
-        
-        % Mcu = struct;
-        % Mcu.GtF = ColorModels.F_GMM{i};
-        % Mcu.GtB = ColorModels.B_GMM{i};
-        
-        % Mch = struct;
-        % Mch.GtF = ColorModels.F_GMM{i};
-        % Mch.Gt1F = F_GMM_new;
-        % Mch.GtB = ColorModels.B_GMM{i};
-        % Mch.Gt1B = F_GMM_new;
-        
-        % Paragraph 4-5 of section 2.3 (research) 
-        pcu =  ColorModels.p_c{i};
-        
-        % Get pch 
-        % First we need to combine the 2 GMMs
-        F_GMM_combined = fitgmdist([F_new; ColorModels.F],6); % Could be either 6 or 2 idk
-        B_GMM_combined = fitgmdist([B_new; ColorModels.B],6);
-        
-        p_c = ColorModels.p_c{i};
-        pcu = zeros(WindowWidth, WindowWidth);
-        numForegroundUnits = 0;
-        
-        
-        % Count foregound pixels
-        c = 1; % column index
-        for j = lowerX:upperX
-            r = 1; %row index
-            for k = lowerY:upperY
-                if (Mask(k,j) == 1 && MaskOutline(k,j) == 0)
-                    numForegroundUnits = numForegroundUnits  + 1;
-                end
-                pcxF = pdf(F_GMM_combined, [IMG(k,j,1), IMG(k,j,2), IMG(k,j,3)]);
-                pcxB = pdf(B_GMM_combined , [IMG(k,j,1), IMG(k,j,2), IMG(k,j,3)]);
-                pcu(r,c) = pcxF/(pcxF + pcxB); %(r,c) is x
-                r = r + 1;
-            end
-            c = c + 1;
-        end
-        
-        % The number of pixels is incorrect because the way we collected it
-        % in initColorModels.m doesn't use the boundary
-        if(numForegroundUnits > size(ColorModels.F{i},1))
-            % need to recompute fc since we chose the updated model
-            w_cx = exp((-d_x.^2)/(sigma_c)^2);
-            left = abs(warpedMaskOutline(lowerY:upperY,lowerX:upperX) - pch); 
-            numerator = left.*w_cx;
-            numerator = sum(numerator(:)); % Sum is the integral
-            denominator = sum(w_cx(:));
-            fc = 1 - numerator/denominator;
-            ColorModels.Confidences{i} = fc;
+        % we update the model with new color model
+        if(size(new_f_count,1) ~= 0 & size(new_f_count,1) < size(ColorModels.F{i}, 1))
+
+            newfGMM = fGMM;
+            newbGMM = bGMM;
+            newFPoints = window_vector(new_f_count, :);
+            newBPoints = window_vector(new_b_count, :);
+
+            omega = exp(NewDistance / ((WindowWidth/2)^2));
+            omega = omega(:);
             
-            p_c = pcu;
-        end
-        
-        
-       % Updating the Color Model (Section 2.4 research, 6 project
-       % description)
-        if (ColorModels.Confidences{i} > fcutoff)
-            sigma_s = SigmaMin + A*(ColorConfidences.Confidences{i} - fcutoff).^R;
+            % grab the binary shape mask
+            conf = warpedMaskOutline(lowerY:upperY,lowerX:upperX);
+            conf = conf(:);
+
+            conf = abs(conf - new_probs).*omega;
+            conf = (1 - sum( conf(:))) / (sum(omega(:)));
+            
+            % reshape into probability window
+            prob = reshape(new_probs, [size(window, 1) size(window, 2)]);
+
+
         else
-            sigma_s = SigmaMin;
+            % retain our old GMM models
+            newfGMM = ColorModels.F_GMM{i};
+            newbGMM = ColorModels.B_GMM{i};  
+            conf = ColorModels.Confidences{i};
+            newFPoints = f_probs;
+            newBPoints = b_probs;
+            prob = reshape(old_probs, [size(window, 1) size(window, 1)]);
+      
+            
         end
-        
-        ShapeConfidences.Confidences{i} = 1 - exp(-ColorConfidences.d{i}.^2 / sigma_s^2);
-        
-        % Calulate pkf
-        LHS = 
+        w{i} = NewLocalWindows(i,:);
+        confidence{i} = conf;
+        foreground{i} = newFPoints;
+        background{i} = newBPoints;
+        f_prob{i} = newfGMM;
+        b_prob{i} = newbGMM;
+        d{i} = NewDistance;
+        probs{i} = prob;
+
+    end
+
+    %%%%%%%%%%%%% LOOK
+
+    newColorModel = struct;
+    newColorModel.Confidences = confidence;
+    newColorModel.B_GMM = b_prob;
+    newColorModel.F_GMM = f_prob;
+    newColorModel.Windows = w;
+    newColorModel.F = foreground;
+    newColorModel.B = background;
+    newColorModel.d = d;
+    newColorModel.p_c = probs;
+
+
+    %uses the new color models
+    ShapeConfidences = initShapeConfidences(NewLocalWindows, newColorModel, WindowWidth, SigmaMin, A, R, fcutoff);
+    
+
+    %%%%%%%%%%
+    LocalWarpedMasks = cell(numLocalWindows, 1);
+    for i = 1:numLocalWindows
+        lowerX = round(NewLocalWindows(i,1) - WindowWidth / 2);
+        upperX = round(NewLocalWindows(i,1) + WindowWidth / 2);
+        lowerY = round(NewLocalWindows(i,2) - WindowWidth / 2);
+        upperY = round(NewLocalWindows(i,2) + WindowWidth / 2); 
+        LocalWarpedMasks{i} = warpedMask( lowerY:upperY, lowerX:upperX);
     end
     
+    %merge models
+    pfs = cell(numLocalWindows, 1);
+    for i = 1:numLocalWindows
+        localMask = LocalWarpedMasks{i};
+        shapeConf = ShapeConfidences.Confidences{i};
+        
+        pfs{i} = shapeConf.*localMask + (1 - shapeConf) .* newColorModel.p_c{i};
+    end
     
+    %merging
+    maskNum = zeros(size(warpedMask));
+    maskDenom = zeros(size(warpedMask));
+    for i = 1:numLocalWindows
+        pfsk = pfs{i};
+        
+        lowerX = round(NewLocalWindows(i,1) - WindowWidth / 2);
+        upperX = round(NewLocalWindows(i,1) + WindowWidth / 2);
+        lowerY = round(NewLocalWindows(i,2) - WindowWidth / 2);
+        upperY = round(NewLocalWindows(i,2) + WindowWidth / 2); 
+        
+        for row = lowerY:upperY
+            for col = lowerX:upperX
+                
+                denom = inv(pdist([NewLocalWindows(i,1), NewLocalWindows(i,2); col, row]) + 0.1);
+
+                num = pfsk( col - lowerX + 1, row - lowerY + 1) * denom;
+                maskNum(row, col) = maskNum(row,col) + num;
+                maskDenom(row, col) = maskDenom(row,col) + denom;
+                
+            end
+        end  
+    end
+    
+    maskDenom(maskDenom == 0) = 1;
+    Pfs = maskNum ./ maskDenom;
+    
+    UpdatedMask = zeros(size(Pfs));
+    UpdatedMask(Pfs > ProbMaskThreshold) = 1;
+    for i = 1:size(LocalWindows, 1)
+        lowerY = round(LocalWindows(i,2) - WindowWidth / 2);
+        upperY = round(LocalWindows(i,2) + WindowWidth / 2);
+        lowerX = round(LocalWindows(i,1) - WindowWidth / 2);
+        upperX = round(LocalWindows(i,1) + WindowWidth / 2); 
+        window = UpdatedMask(lowerY:upperY, lowerX:upperX);
+        window = imfill(window, 'holes');
+        UpdatedMask(lowerY:upperY, lowerX:upperX) = window;
+        
+    end
+    mask = imfill(UpdatedMask, 'holes');  
+    LocalWindows = NewLocalWindows;
+    ColorModels = newColorModel;
+ 
+
 end
 

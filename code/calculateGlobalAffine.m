@@ -40,26 +40,7 @@ function [WarpedFrame, WarpedMask, WarpedMaskOutline, WarpedLocalWindows] = calc
     figure; 
     showMatchedFeatures(I1,I2,matchedPoints1,matchedPoints2);
     
-    % Note: It might be a good a good idea to use metrics and find corner
-    % points to avoid errors but this might not be necessary
-
-    
-    % https://www.mathworks.com/help/vision/ref/kazepoints.length.html
-%     for i = 1:length(matched_points1)
-%         matched_point1 = matched_points1.Location(i,:);
-%         matched_point2 = matched_points2.Location(i,:);
-%    
-%         % Remember x and y are column and row respectively (switched)
-%         if(Mask(round(matched_point1(:,2)), round(matched_point1(:,1))) == 1)
-%             f_points1 = [f_points1; matched_point1];
-%             f_points2 = [f_points2; matched_point2];
-%             metric1 = [metric1; matched_points1.Metric(i)];
-%             metric2 = [metric2; matched_points2.Metric(i)];
-%         end
-%     end
-%     
-%     updated_matched_points1 = cornerPoints(f_points1, 'Metric', metric1);
-%     updated_matched_points2 = cornerPoints(f_points2, 'Metric', metric2);
+    % grab only object features here
     
     transform = estimateGeometricTransform(matchedPoints1, matchedPoints2, 'affine');
     
